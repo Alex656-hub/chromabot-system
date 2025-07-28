@@ -3,11 +3,15 @@ requirements.txt
 setup.py
 ./app/__init__.py
 ./app/config.py
+./app/main.py
+./app/test_main.py
 ./src/__init__.py
 ./src/arduino_interface.py
-./src/data_captura.py
+./src/data_capture.py
 ./src/data_processing.py
 ./src/export_utils.py
+app/__init__.py
+app/config.py
 arduino/test_simple.ino
 chromabot_system.egg-info/PKG-INFO
 chromabot_system.egg-info/SOURCES.txt
@@ -16,3 +20,7 @@ chromabot_system.egg-info/entry_points.txt
 chromabot_system.egg-info/not-zip-safe
 chromabot_system.egg-info/requires.txt
 chromabot_system.egg-info/top_level.txt
+src/__init__.py
+src/arduino_interface.py
+src/data_processing.py
+src/export_utils.py

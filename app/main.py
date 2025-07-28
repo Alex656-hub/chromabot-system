@@ -54,12 +54,17 @@ except ImportError:
         if os.path.exists(src_path):
             sys.path.insert(0, os.path.abspath(src_path))
         
-        from data_capture import RGBDataCapture, capture_rgb_sample
-        from data_processing import RGBDataProcessor, process_capture_session
-        from export_utils import ChromabotExporter, export_single_session_simple
-        from arduino_interface import initialize_color_sensor
-        MODULES_AVAILABLE = True
-        MODULE_SOURCE = "path_relativo"
+        try:
+            from src.data_capture import RGBDataCapture, capture_rgb_sample
+            from src.data_processing import RGBDataProcessor, process_capture_session
+            from src.export_utils import ChromabotExporter, export_single_session_simple
+            from src.arduino_interface import initialize_color_sensor
+            MODULES_AVAILABLE = True
+            MODULE_SOURCE = "path_relativo"
+        except ImportError as e2:
+            st.warning(f"⚠️ No se pudo importar desde src: {e2}")
+            MODULES_AVAILABLE = False
+            MODULE_SOURCE = "no_disponible"
     except ImportError as e:
         st.warning(f"⚠️ Módulos avanzados no disponibles: {e}")
         st.info("🎭 Continuando en modo básico...")
