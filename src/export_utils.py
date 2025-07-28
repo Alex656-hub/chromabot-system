@@ -21,8 +21,33 @@ import hashlib
 from pathlib import Path
 import streamlit as st
 import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'app'))
+
+# Determinar la ruta correcta del proyecto
+def get_project_root() -> Path:
+    """Encuentra la raíz del proyecto de manera confiable"""
+    current_file = Path(__file__).resolve()
+    
+    # Buscar la raíz del proyecto (donde está requirements.txt o main.py)
+    search_path = current_file.parent
+    max_levels = 5  # Límite de seguridad
+    
+    for _ in range(max_levels):
+        if (search_path / "requirements.txt").exists() or \
+           (search_path / "main.py").exists() or \
+           (search_path / "app").is_dir():
+            return search_path
+        
+        parent = search_path.parent
+        if parent == search_path:  # Llegamos a la raíz del sistema
+            break
+        search_path = parent
+    
+    # Fallback: usar directorio padre del archivo actual
+    return current_file.parent.parent
+
+# Configurar path del proyecto
+PROJECT_ROOT = get_project_root()
+sys.path.append(str(PROJECT_ROOT / "app"))
 
 from app.config import (DATA_STRUCTURE, EXPORT_CONFIG, PINEAPPLE_CODES, 
                        MATURITY_STATES, COLOR_SENSOR_CONFIG)
@@ -32,21 +57,47 @@ class ChromabotExporter:
     Clase principal para exportación de datos del Chromabot
     """
     
-    def __init__(self, base_path: str = "data/exports"):
-        self.base_path = Path(base_path)
-        self.base_path.mkdir(parents=True, exist_ok=True)
+    def __init__(self, base_path: str = None):
+        """
+        Inicializa el exportador con rutas absolutas corregidas
         
-        # Rutas específicas
-        self.excel_path = self.base_path / "excel"
-        self.backup_path = self.base_path / "backups"
-        self.reports_path = self.base_path / "reports"
+        Args:
+            base_path: Ruta base personalizada (opcional)
+        """
+        # Determinar la ruta correcta del proyecto
+        self.project_root = get_project_root()
         
-        # Crear directorios
-        for path in [self.excel_path, self.backup_path, self.reports_path]:
+        if base_path is None:
+            # Usar estructura estándar del proyecto
+            data_root = self.project_root / "data"
+        else:
+            data_root = Path(base_path)
+        
+        # Crear directorio data si no existe
+        data_root.mkdir(parents=True, exist_ok=True)
+        
+        # Rutas específicas - TODAS absolutas y relativas a la raíz del proyecto
+        self.data_root = data_root
+        self.excel_path = data_root / "exports"
+        self.backup_path = data_root / "backups"
+        self.reports_path = data_root / "reports" 
+        self.samples_path = data_root / "samples"
+        
+        # Crear todos los directorios necesarios
+        for path in [self.excel_path, self.backup_path, self.reports_path, self.samples_path]:
             path.mkdir(parents=True, exist_ok=True)
         
         self.current_dataset = []
         self.export_log = []
+        
+        # Log de inicialización para debugging
+        print(f"📁 ChromabotExporter inicializado:")
+        print(f"   - Raíz proyecto: {self.project_root}")
+        print(f"   - Datos raíz: {self.data_root}")  
+        print(f"   - Excel: {self.excel_path}")
+        print(f"   - Backups: {self.backup_path}")
+        print(f"   - Reportes: {self.reports_path}")
+        print(f"   - Muestras: {self.samples_path}")
     
     def export_single_session(self, session_data: Any, 
                             filename: Optional[str] = None,
