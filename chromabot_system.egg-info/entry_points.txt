@@ -1,0 +1,6 @@
+[console_scripts]
+chromabot = app.main:main
+chromabot-arduino = src.arduino_interface:main
+chromabot-capture = src.data_capture:main
+chromabot-export = src.export_utils:main
+chromabot-process = src.data_processing:main

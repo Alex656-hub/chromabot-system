@@ -1,0 +1,100 @@
+Metadata-Version: 2.4
+Name: chromabot-system
+Version: 1.0.0
+Summary: Sistema de captura y análisis RGB para clasificación de madurez de piñas
+Home-page: https://github.com/Alex656-hub/chromabot-system.git
+Author: Jose Alex
+Author-email: 7494911521@untrm.edu.pe
+Maintainer: Jose Alex
+Maintainer-email: 7494911521@untrm.edu.pe
+License: MIT
+Project-URL: Bug Reports, https://github.com/Alex656-hub/chromabot-system.git/issues
+Project-URL: Documentation, https://github.com/Alex656-hub/chromabot-system.git/docs
+Project-URL: Source Code, https://github.com/Alex656-hub/chromabot-system.git
+Project-URL: Funding, https://untrm.edu.pe
+Project-URL: Say Thanks!, https://github.com/Alex656-hub/chromabot-system.git/stargazers
+Keywords: rgb,color,pineapple,piña,maturity,madurez,classification,clasificacion,machine-learning,ml,agriculture,agricultura,sensors,sensores,tcs3200,streamlit,data-analysis,computer-vision,iot
+Platform: any
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Image Processing
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Education
+Classifier: Natural Language :: Spanish
+Classifier: Natural Language :: English
+Classifier: Environment :: Web Environment
+Classifier: Environment :: Console
+Classifier: Framework :: Jupyter
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: streamlit
+Requires-Dist: pandas
+Requires-Dist: openpyxl
+Requires-Dist: pyserial
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: plotly
+Requires-Dist: scipy
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.10.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: mypy>=0.900; extra == "dev"
+Requires-Dist: pre-commit>=2.15.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.0.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0.0; extra == "docs"
+Requires-Dist: myst-parser>=0.15.0; extra == "docs"
+Provides-Extra: test
+Requires-Dist: pytest>=6.0.0; extra == "test"
+Requires-Dist: pytest-mock>=3.6.0; extra == "test"
+Requires-Dist: coverage>=5.5.0; extra == "test"
+Provides-Extra: hardware
+Requires-Dist: pyserial>=3.5; extra == "hardware"
+Requires-Dist: arduino-python3>=0.6; extra == "hardware"
+Provides-Extra: ml
+Requires-Dist: scikit-learn>=1.0.0; extra == "ml"
+Requires-Dist: xgboost>=1.5.0; extra == "ml"
+Requires-Dist: tensorflow>=2.8.0; extra == "ml"
+Provides-Extra: all
+Requires-Dist: pytest>=6.0.0; extra == "all"
+Requires-Dist: black>=22.0.0; extra == "all"
+Requires-Dist: sphinx>=4.0.0; extra == "all"
+Requires-Dist: scikit-learn>=1.0.0; extra == "all"
+Requires-Dist: pyserial>=3.5; extra == "all"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: maintainer
+Dynamic: maintainer-email
+Dynamic: platform
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# chromabot-system
