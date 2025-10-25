@@ -1,8 +1,30 @@
 import serial
 import json
 import time
+import logging
 import streamlit as st
 from typing import Dict, List, Tuple, Optional
+
+
+logger = logging.getLogger(__name__)
+
+
+def _in_streamlit_context() -> bool:
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        return get_script_run_ctx() is not None
+    except Exception:
+        return False
+
+
+def _notify(kind: str, message: str):
+    if _in_streamlit_context():
+        getattr(st, kind)(message)
+    else:
+        print(message)
+        log_method = getattr(logger, kind if kind in {"error", "warning"} else "info")
+        log_method(message)
 
 class ColorSensorInterface:
     """
@@ -22,6 +44,13 @@ class ColorSensorInterface:
         try:
             self.arduino = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
             time.sleep(2)  # Esperar inicialización de Arduino
+            self.arduino.reset_input_buffer()
+
+            # Revisar si ya existe mensaje inicial "ready"
+            initial_response = self.read_response(timeout=1)
+            if initial_response and "ready" in initial_response.get("status", ""):
+                self.is_connected = True
+                return True
             
             # Verificar conexión
             self.send_command("GET_STATUS")
@@ -31,10 +60,11 @@ class ColorSensorInterface:
                 self.is_connected = True
                 return True
             else:
+                _notify("warning", f"No se recibió respuesta del sensor en {self.port}")
                 return False
                 
         except Exception as e:
-            st.error(f"Error conectando Arduino: {e}")
+            _notify("error", f"Error conectando Arduino: {e}")
             return False
     
     def disconnect(self):
@@ -59,7 +89,9 @@ class ColorSensorInterface:
         
         while time.time() - start_time < timeout:
             if self.arduino.in_waiting > 0:
-                data = self.arduino.readline().decode().strip()
+                raw_line = self.arduino.readline()
+                print(f"[DEBUG] Raw serial line: {raw_line!r}")
+                data = raw_line.decode(errors="ignore").strip()
                 
                 if data:
                     try:
@@ -77,7 +109,7 @@ class ColorSensorInterface:
         Captura 40 mediciones RGB y retorna los 20 datos centrales filtrados
         """
         if not self.is_connected:
-            st.error("Arduino no conectado")
+            _notify("error", "Arduino no conectado")
             return None
         
         try:
@@ -85,8 +117,12 @@ class ColorSensorInterface:
             self.send_command("START_CAPTURE")
             
             # Barra de progreso en Streamlit
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+            if _in_streamlit_context():
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+            else:
+                progress_bar = None
+                status_text = None
             
             # Leer respuestas durante la captura
             filtered_data = None
@@ -100,8 +136,12 @@ class ColorSensorInterface:
                 # Actualizar progreso
                 if "progress" in response:
                     progress = response["progress"]
-                    progress_bar.progress(progress / 100)
-                    status_text.text(f"Capturando... {progress}%")
+                    if progress_bar:
+                        progress_bar.progress(progress / 100)
+                    else:
+                        print(f"Progreso captura: {progress}%")
+                    if status_text:
+                        status_text.text(f"Capturando... {progress}%")
                 
                 # Datos filtrados recibidos
                 if "filtered_data" in response:
@@ -109,14 +149,18 @@ class ColorSensorInterface:
                 
                 # Captura completada
                 if response.get("status") == "capture_complete":
-                    progress_bar.progress(100)
-                    status_text.text("✅ Captura completada")
+                    if progress_bar:
+                        progress_bar.progress(100)
+                    if status_text:
+                        status_text.text("✅ Captura completada")
+                    else:
+                        print("Captura completada")
                     break
             
             return filtered_data
             
         except Exception as e:
-            st.error(f"Error durante captura: {e}")
+            _notify("error", f"Error durante captura: {e}")
             return None
     
     def get_single_reading(self) -> Optional[Dict]:
@@ -141,8 +185,8 @@ class ColorSensorInterface:
             self.send_command("CALIBRATE")
             
             # Mostrar instrucciones de calibración
-            st.info("🔧 Calibrando sensor...")
-            st.warning("📋 Coloque una superficie blanca frente al sensor")
+            _notify("info", "🔧 Calibrando sensor...")
+            _notify("warning", "📋 Coloque una superficie blanca frente al sensor")
             
             # Esperar respuestas de calibración
             while True:
@@ -153,8 +197,11 @@ class ColorSensorInterface:
                 
                 if "white_reference" in response:
                     white_ref = response["white_reference"]
-                    st.success("✅ Calibración completada")
-                    st.json(white_ref)
+                    _notify("success", "✅ Calibración completada")
+                    if _in_streamlit_context():
+                        st.json(white_ref)
+                    else:
+                        print(f"Referencia blanca: {white_ref}")
                     return True
                 
                 if response.get("calibration") == "complete":
@@ -163,7 +210,7 @@ class ColorSensorInterface:
             return True
             
         except Exception as e:
-            st.error(f"Error en calibración: {e}")
+            _notify("error", f"Error en calibración: {e}")
             return False
     
     def test_connection(self) -> Dict:
@@ -187,8 +234,8 @@ def initialize_color_sensor(port: str = "COM3") -> ColorSensorInterface:
     sensor = ColorSensorInterface(port=port)
     
     if sensor.connect():
-        st.success(f"✅ Sensor de color conectado en {port}")
+        _notify("success", f"✅ Sensor de color conectado en {port}")
         return sensor
     else:
-        st.error(f"❌ No se pudo conectar al sensor en {port}")
+        _notify("error", f"❌ No se pudo conectar al sensor en {port}")
         return None

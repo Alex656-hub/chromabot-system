@@ -15,11 +15,57 @@ MATURITY_STATES = {
     "Sobre Madurada": 3
 }
 
-# Configuración de captura de datos RGB
-DATA_POINTS_TOTAL = 40      # Total de mediciones por muestra
-DATA_POINTS_FILTERED = 20   # Los 20 datos centrales (descarta 10 inicial + 10 final)
-START_INDEX = 10            # Índice donde inicia el filtrado
-END_INDEX = 30              # Índice donde termina el filtrado
+# ============================================================================
+# CONFIGURACIÓN DE CAPTURA POR SECCIONES (ACTUALIZADO)
+# ============================================================================
+
+# Configuración de mediciones por sección
+DATA_POINTS_PER_SECTION = 20  # Mediciones por cada sección
+MEASUREMENT_SECTIONS = ["MEDIA", "SUPERIOR", "INFERIOR"]  # Orden de captura
+DATA_POINTS_TOTAL = len(MEASUREMENT_SECTIONS) * DATA_POINTS_PER_SECTION  # 60 total
+# Cantidad de lecturas útiles tras filtrado (coincide con el firmware TCS3200)
+DATA_POINTS_FILTERED = 20
+
+# Configuración detallada de cada sección
+SECTION_CONFIG = {
+    "MEDIA": {
+        "order": 1,
+        "name_es": "Sección Media (Principal)",
+        "description": "Centro de la piña - Zona de mayor representatividad",
+        "icon": "🎯",
+        "color": "#10b981",
+        "instruction": "Posicione el sensor en el CENTRO de la piña",
+        "range_start": 1,
+        "range_end": 20
+    },
+    "SUPERIOR": {
+        "order": 2,
+        "name_es": "Sección Superior",
+        "description": "Zona superior - Cercana a la corona",
+        "icon": "⬆️",
+        "color": "#3b82f6",
+        "instruction": "Posicione el sensor en la PARTE SUPERIOR de la piña",
+        "range_start": 21,
+        "range_end": 40
+    },
+    "INFERIOR": {
+        "order": 3,
+        "name_es": "Sección Inferior",
+        "description": "Zona inferior - Base de la piña",
+        "icon": "⬇️",
+        "color": "#f59e0b",
+        "instruction": "Posicione el sensor en la PARTE INFERIOR de la piña",
+        "range_start": 41,
+        "range_end": 60
+    }
+}
+
+# Estados de indicador visual
+SECTION_STATES = {
+    "pending": {"icon": "⚪", "color": "#f3f4f6", "label": "Pendiente"},
+    "active": {"icon": "🟢", "color": "#d1fae5", "label": "Capturando"},
+    "completed": {"icon": "✅", "color": "#bfdbfe", "label": "Completada"}
+}
 
 # Configuración específica del sensor de COLOR
 COLOR_SENSOR_CONFIG = {
@@ -34,7 +80,7 @@ COLOR_SENSOR_CONFIG = {
 ARDUINO_CONFIG = {
     "baudrate": 9600,
     "timeout": 1,
-    "port": "COM3"  # Ajustar según puerto disponible
+    "port": "COM3"
 }
 
 # Configuración de exportación
@@ -47,18 +93,67 @@ EXPORT_CONFIG = {
 # Estructura de datos de salida
 DATA_STRUCTURE = {
     "columns": [
-        "sample_id",           # ID único de muestra
-        "pineapple_type",      # Tipo de piña
-        "pineapple_code",      # Código numérico (1,2,3)
-        "maturity_state",      # Estado de madurez
-        "maturity_code",       # Código de madurez (1,2,3)
-        "r_avg",              # Promedio canal Rojo
-        "g_avg",              # Promedio canal Verde  
-        "b_avg",              # Promedio canal Azul
-        "r_values",           # Todos los valores R (20 datos)
-        "g_values",           # Todos los valores G (20 datos)
-        "b_values",           # Todos los valores B (20 datos)
-        "timestamp",          # Fecha y hora de captura
-        "measurement_notes"   # Notas adicionales
+        "sample_id",
+        "pineapple_type",
+        "pineapple_code",
+        "maturity_state",
+        "maturity_code",
+        "r_avg",
+        "g_avg",
+        "b_avg",
+        "r_values",
+        "g_values",
+        "b_values",
+        "timestamp",
+        "measurement_notes"
     ]
+}
+
+# ============================================================================
+# ESTRUCTURA DE DATOS ACTUALIZADA (CON SECCIONES)
+# ============================================================================
+
+DATA_STRUCTURE_V2 = {
+    "version": "2.0",
+    "columns": [
+        "sample_id",
+        "pineapple_type",
+        "pineapple_code",
+        "maturity_state",
+        "maturity_code",
+        "measurement_section",
+        "section_reading_num",
+        "global_reading_num",
+        "r_value",
+        "g_value",
+        "b_value",
+        "timestamp",
+        "quality_score",
+        "measurement_notes"
+    ],
+    "summary_columns": [
+        "sample_id",
+        "pineapple_type",
+        "pineapple_code",
+        "maturity_state",
+        "maturity_code",
+        "section_name",
+        "r_avg_section",
+        "g_avg_section",
+        "b_avg_section",
+        "r_std_section",
+        "g_std_section",
+        "b_std_section",
+        "cv_percentage",
+        "section_quality_score",
+        "timestamp_start",
+        "timestamp_end"
+    ]
+}
+
+# Configuración de validación
+VALIDATION_CONFIG = {
+    "max_cv_percentage": 5.0,
+    "min_quality_score": 70.0,
+    "max_outliers_per_section": 3
 }

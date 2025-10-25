@@ -17,12 +17,15 @@ from dataclasses import dataclass
 import colorsys
 from scipy import stats
 from scipy.signal import savgol_filter
-import streamlit as st
+import logging
+
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'app'))
 
-from app.config import DATA_POINTS_FILTERED, COLOR_SENSOR_CONFIG
+from app.config import COLOR_SENSOR_CONFIG
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class RGBStatistics:
@@ -105,7 +108,7 @@ class RGBDataProcessor:
             }
             
         except Exception as e:
-            st.error(f"❌ Error procesando sesión: {e}")
+            logger.exception("Error procesando sesión")
             return {}
     
     def _extract_rgb_values(self, session_data: Any) -> Dict[str, List[int]]:

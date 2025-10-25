@@ -7,10 +7,6 @@ from datetime import datetime
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# ============================================================================
-# CONFIGURACIÓN DE PÁGINA
-# ============================================================================
-
 st.set_page_config(
     page_title="Chromabot | Sistema Inteligente de Análisis RGB",
     page_icon="🎨",
@@ -18,15 +14,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ============================================================================
-# ESTILOS CSS MODERNOS Y OPTIMIZADOS
-# ============================================================================
-
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    /* ===== VARIABLES GLOBALES ===== */
     :root {
         --primary: #6366f1;
         --secondary: #8b5cf6;
@@ -47,19 +38,16 @@ st.markdown("""
         --shadow-xl: 0 20px 40px rgba(0,0,0,0.12);
     }
     
-    /* ===== TIPOGRAFÍA ===== */
     * {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         -webkit-font-smoothing: antialiased;
     }
     
-    /* ===== LAYOUT PRINCIPAL ===== */
     .main {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         min-height: 100vh;
     }
     
-    /* ===== HEADER CON GLASSMORPHISM ===== */
     .header-glass {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(20px);
@@ -129,7 +117,6 @@ st.markdown("""
         animation: pulse 2s ease-in-out infinite;
     }
     
-    /* ===== HERO SECTION PERFECTAMENTE CENTRADO ===== */
     .hero-banner {
         background: var(--gradient-main);
         padding: 4.5rem 2rem;
@@ -221,7 +208,6 @@ st.markdown("""
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
     
-    /* ===== CARDS MODERNAS ===== */
     .card-modern {
         background: white;
         border: 1px solid var(--border);
@@ -286,7 +272,6 @@ st.markdown("""
         text-align: center;
     }
     
-    /* ===== BOTONES ===== */
     .stButton > button {
         background: var(--gradient-main);
         color: white;
@@ -305,7 +290,6 @@ st.markdown("""
         box-shadow: var(--shadow-lg);
     }
     
-    /* ===== SEPARADORES DE SECCIÓN ===== */
     .section-separator {
         display: flex;
         align-items: center;
@@ -333,12 +317,10 @@ st.markdown("""
         letter-spacing: -0.02em;
     }
     
-    /* ===== TÍTULOS DE SECCIONES ===== */
     h1, h2, h3, h4, h5, h6 {
         text-align: center;
     }
     
-    /* ===== TABS MEJORADOS Y CENTRADOS ===== */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0.6rem;
         background: white;
@@ -370,7 +352,6 @@ st.markdown("""
         box-shadow: var(--shadow-md);
     }
     
-    /* ===== MÉTRICAS ===== */
     .metric-box {
         background: white;
         border: 1px solid var(--border);
@@ -417,7 +398,6 @@ st.markdown("""
         opacity: 0.85;
     }
     
-    /* ===== ALERTAS ===== */
     .alert-box {
         border-radius: 14px;
         border: 1px solid;
@@ -446,7 +426,6 @@ st.markdown("""
         color: var(--warning);
     }
     
-    /* ===== PROGRESS BAR ===== */
     .stProgress > div > div {
         background: var(--gradient-main);
         border-radius: 10px;
@@ -457,7 +436,6 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* ===== COLOR SAMPLE ===== */
     .color-display {
         border-radius: 18px;
         border: 2px solid var(--border);
@@ -480,7 +458,6 @@ st.markdown("""
         box-shadow: var(--shadow-xl);
     }
     
-    /* ===== CHART CONTAINER ===== */
     .chart-wrapper {
         background: white;
         border-radius: 18px;
@@ -490,7 +467,6 @@ st.markdown("""
         margin: 1rem 0;
     }
     
-    /* ===== FOOTER ===== */
     .footer-box {
         background: var(--dark);
         color: white;
@@ -516,18 +492,15 @@ st.markdown("""
         text-align: center;
     }
     
-    /* ===== DATAFRAME CENTRADO ===== */
     .stDataFrame {
         text-align: center;
     }
     
-    /* ===== SELECTBOX LABEL CENTRADO ===== */
     .stSelectbox label {
         text-align: center;
         display: block;
     }
     
-    /* ===== ANIMACIONES ===== */
     @keyframes slideDown {
         from { opacity: 0; transform: translateY(-20px); }
         to { opacity: 1; transform: translateY(0); }
@@ -558,7 +531,6 @@ st.markdown("""
         to { transform: translateX(100%) translateY(100%) rotate(45deg); }
     }
     
-    /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
         .hero-title { font-size: 2.5rem; }
         .hero-badges { flex-direction: column; align-items: center; }
@@ -568,21 +540,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================================
-# IMPORTACIONES Y CONFIGURACIÓN
-# ============================================================================
-
 try:
     from config import (
         PINEAPPLE_CODES, MATURITY_STATES, DATA_POINTS_TOTAL, 
-        DATA_POINTS_FILTERED, COLOR_SENSOR_CONFIG, DATA_STRUCTURE
+        DATA_POINTS_PER_SECTION, MEASUREMENT_SECTIONS, SECTION_CONFIG,
+        SECTION_STATES, COLOR_SENSOR_CONFIG, DATA_STRUCTURE, VALIDATION_CONFIG,
+        ARDUINO_CONFIG
     )
     CONFIG_AVAILABLE = True
 except ImportError:
     PINEAPPLE_CODES = {"Golden (MD-2)": 1, "Roja Española": 2, "Cayena": 3}
     MATURITY_STATES = {"Verde": 1, "Madura": 2, "Sobre Madurada": 3}
-    DATA_POINTS_TOTAL = 40
-    DATA_POINTS_FILTERED = 20
+    DATA_POINTS_TOTAL = 60
+    DATA_POINTS_PER_SECTION = 20
+    MEASUREMENT_SECTIONS = ["MEDIA", "SUPERIOR", "INFERIOR"]
     COLOR_SENSOR_CONFIG = {"model": "GY-31 TCS3200", "channels": ["R", "G", "B"]}
     CONFIG_AVAILABLE = False
 
@@ -610,10 +581,6 @@ except ImportError:
     except ImportError:
         MODULE_SOURCE = "no_disponible"
 
-# ============================================================================
-# HEADER
-# ============================================================================
-
 st.markdown("""
 <div class="header-glass">
     <div class="header-wrapper">
@@ -628,10 +595,6 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-# ============================================================================
-# HERO SECTION
-# ============================================================================
 
 st.markdown("""
 <div class="hero-banner">
@@ -654,19 +617,27 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ============================================================================
-# INICIALIZACIÓN DEL SISTEMA
-# ============================================================================
-
 if MODULES_AVAILABLE and "capture_system" not in st.session_state:
     st.session_state.capture_system = RGBDataCapture()
     st.session_state.processor = RGBDataProcessor()
     st.session_state.exporter = ChromabotExporter()
     st.session_state.captured_sessions = []
+    st.session_state.sensor_connected = False
 
-# ============================================================================
-# SECCIÓN DE CAPTURA
-# ============================================================================
+if MODULES_AVAILABLE:
+    with st.expander("🔌 Conexión del sensor Arduino", expanded=False):
+        col_connect, col_status = st.columns([1, 1])
+        with col_connect:
+            if st.button("Conectar Sensor", use_container_width=True):
+                sensor = initialize_color_sensor(ARDUINO_CONFIG.get("port", "COM3"))
+                if sensor:
+                    st.session_state.capture_system.arduino = sensor
+                    st.session_state.sensor_connected = True
+        with col_status:
+            if st.session_state.get("sensor_connected") and getattr(st.session_state.capture_system.arduino, "is_connected", False):
+                st.success("✅ Sensor conectado y listo")
+            else:
+                st.warning("⚠️ Sensor no conectado")
 
 st.markdown("""
 <div class="section-separator">
@@ -681,7 +652,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# TABS CON SISTEMA INCLUIDO
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["🍍 Variedad", "🌱 Madurez", "📸 Captura", "📊 Resultados", "⚙️ Sistema"])
 
 with tab1:
@@ -751,8 +721,8 @@ with tab3:
         metrics_data = [
             {"icon": "🍍", "value": str(st.session_state.pineapple_code), "label": st.session_state.pineapple_type},
             {"icon": "🌱", "value": str(st.session_state.maturity_code), "label": st.session_state.maturity_state},
-            {"icon": "📊", "value": str(DATA_POINTS_FILTERED), "label": "Puntos RGB"},
-            {"icon": "⏱️", "value": "~3s", "label": "Tiempo Estimado"}
+            {"icon": "📊", "value": str(DATA_POINTS_TOTAL), "label": "Lecturas Totales"},
+            {"icon": "⏱️", "value": "~12s", "label": "Tiempo Estimado"}
         ]
         
         for i, metric in enumerate(metrics_data):
@@ -767,94 +737,265 @@ with tab3:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([1,2,1])
-        with col2:
-            if st.button("🚀 INICIAR CAPTURA", use_container_width=True, key="capture"):
+        if "capture_in_progress" in st.session_state and st.session_state.capture_in_progress:
+            current_section = st.session_state.get('current_section', 'MEDIA')
+            completed_sections = st.session_state.get('completed_sections', [])
+            
+            st.markdown("### 📍 Progreso de Captura por Secciones")
+            
+            cols = st.columns(len(MEASUREMENT_SECTIONS))
+            
+            for idx, section_name in enumerate(MEASUREMENT_SECTIONS):
+                with cols[idx]:
+                    config = SECTION_CONFIG[section_name]
+                    
+                    if section_name == current_section and section_name not in completed_sections:
+                        state = SECTION_STATES["active"]
+                    elif section_name in completed_sections:
+                        state = SECTION_STATES["completed"]
+                    else:
+                        state = SECTION_STATES["pending"]
+                    
+                    st.markdown(f"""
+                    <div style="background: {state['color']}; padding: 1.2rem; 
+                                border-radius: 14px; text-align: center; 
+                                border: 2px solid {'#22c55e' if state['label'] == 'Capturando' else '#e5e7eb'};">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">{config['icon']}</div>
+                        <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; color: #1f2937;">
+                            {section_name}
+                        </div>
+                        <div style="font-size: 2rem;">{state['icon']}</div>
+                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.3rem;">
+                            {state['label']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+        
+        if "current_session" not in st.session_state:
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("🚀 INICIAR CAPTURA", use_container_width=True, key="capture_start"):
+                    st.session_state.capture_in_progress = True
+                    st.session_state.current_section = MEASUREMENT_SECTIONS[0]
+                    st.session_state.completed_sections = []
+                    
+                    if MODULES_AVAILABLE:
+                        st.info("📡 Captura con sensor físico...")
+                        try:
+                            session = capture_rgb_sample(
+                                st.session_state.capture_system,
+                                st.session_state.pineapple_type,
+                                st.session_state.maturity_state,
+                                notes=f"Web {datetime.now().strftime('%H:%M:%S')}"
+                            )
+                            if session:
+                                st.success("✅ Captura completada")
+                                st.session_state.current_session = session
+                                st.session_state.capture_in_progress = False
+                                st.balloons()
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error: {e}")
+                    else:
+                        st.error("❌ Arduino no conectado. Conecte el sensor TCS3200.")
+                        st.session_state.capture_in_progress = False
+        
+        if "current_session" in st.session_state and st.session_state.current_session:
+            session = st.session_state.current_session
+            
+            st.markdown("---")
+            st.markdown("## 📋 Verificación de Datos Capturados")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info(f"""
+                **📝 Información de la Muestra**
+                - **Código:** {session.sample_id}
+                - **Variedad:** {session.pineapple_type}
+                - **Estado:** {session.maturity_state}
+                """)
+            
+            with col2:
+                st.info(f"""
+                **⏱️ Detalles de Captura**
+                - **Fecha:** {session.capture_timestamp.strftime('%Y-%m-%d')}
+                - **Hora:** {session.capture_timestamp.strftime('%H:%M:%S')}
+                - **Total lecturas:** {len(session.all_readings)}
+                - **Secciones:** {len(session.section_data)}
+                """)
+            
+            st.markdown("### 📊 Estadísticas por Sección")
+            
+            for section_name in MEASUREMENT_SECTIONS:
+                if section_name in session.section_data:
+                    section_data = session.section_data[section_name]
+                    config = SECTION_CONFIG[section_name]
+                    
+                    with st.expander(f"{config['icon']} {section_name} - {len(section_data.readings)} lecturas", expanded=True):
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("🔴 Rojo", 
+                                     f"{section_data.averages['red']:.1f}",
+                                     f"±{section_data.statistics['red']['std']:.1f}")
+                        
+                        with col2:
+                            st.metric("🟢 Verde",
+                                     f"{section_data.averages['green']:.1f}",
+                                     f"±{section_data.statistics['green']['std']:.1f}")
+                        
+                        with col3:
+                            st.metric("🔵 Azul",
+                                     f"{section_data.averages['blue']:.1f}",
+                                     f"±{section_data.statistics['blue']['std']:.1f}")
+                        
+                        with col4:
+                            cv_status = "✅" if section_data.cv_percentage < VALIDATION_CONFIG["max_cv_percentage"] else "⚠️"
+                            st.metric("📊 CV", 
+                                     f"{section_data.cv_percentage:.2f}%",
+                                     f"{cv_status}")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.write(f"**Quality Score:** {section_data.quality_score:.1f}/1.0")
+                        with col2:
+                            st.write(f"**Outliers:** {section_data.outliers_count}")
+                        with col3:
+                            duration = (section_data.timestamp_end - section_data.timestamp_start).total_seconds()
+                            st.write(f"**Duración:** {duration:.1f}s")
+            
+            st.markdown("### 📈 Comparación Visual entre Secciones")
+            
+            sections_list = list(session.section_data.keys())
+            
+            fig = go.Figure()
+            
+            for channel, color in [('red', '#ef4444'), ('green', '#22c55e'), ('blue', '#3b82f6')]:
+                values = [session.section_data[s].averages[channel] for s in sections_list]
+                stds = [session.section_data[s].statistics[channel]['std'] for s in sections_list]
                 
-                if MODULES_AVAILABLE:
-                    st.info("🔬 Captura con sensor físico...")
+                fig.add_trace(go.Bar(
+                    name=channel.upper(),
+                    x=sections_list,
+                    y=values,
+                    error_y=dict(type='data', array=stds),
+                    marker_color=color
+                ))
+            
+            fig.update_layout(
+                barmode='group',
+                title="Promedios RGB por Sección (con desviación estándar)",
+                xaxis_title="Sección",
+                yaxis_title="Valor RGB",
+                height=450,
+                hovermode='x unified'
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown("### 📄 Vista Detallada de Lecturas")
+            
+            display_data = []
+            for reading in session.all_readings[:15]:
+                display_data.append({
+                    'Sección': reading.section,
+                    'Índice Sección': reading.section_index,
+                    'Índice Global': reading.global_index,
+                    'R': reading.red,
+                    'G': reading.green,
+                    'B': reading.blue,
+                    'Quality': f"{reading.quality_score:.2f}",
+                    'Timestamp': reading.timestamp.strftime('%H:%M:%S')
+                })
+            
+            df_display = pd.DataFrame(display_data)
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            
+            if len(session.all_readings) > 15:
+                with st.expander(f"📄 Ver todas las {len(session.all_readings)} lecturas"):
+                    all_data = []
+                    for reading in session.all_readings:
+                        all_data.append({
+                            'Sección': reading.section,
+                            'Idx_Secc': reading.section_index,
+                            'Idx_Global': reading.global_index,
+                            'R': reading.red,
+                            'G': reading.green,
+                            'B': reading.blue,
+                            'Quality': f"{reading.quality_score:.2f}",
+                            'Hora': reading.timestamp.strftime('%H:%M:%S.%f')[:-3]
+                        })
+                    df_all = pd.DataFrame(all_data)
+                    st.dataframe(df_all, use_container_width=True, hide_index=True, height=400)
+            
+            st.markdown("### 🎯 Acciones Disponibles")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("💾 GUARDAR DATOS", use_container_width=True, type="primary", key="save_btn"):
                     try:
-                        session = capture_rgb_sample(
-                            st.session_state.capture_system,
-                            st.session_state.pineapple_type,
-                            st.session_state.maturity_state,
-                            notes=f"Web {datetime.now().strftime('%H:%M:%S')}"
-                        )
-                        if session:
-                            st.success("✅ Captura completada")
-                            st.session_state.current_session = session
+                        exporter = ChromabotExporter()
+                        filepath = exporter.export_single_session(session)
+                        
+                        if filepath:
+                            st.success(f"✅ Datos guardados exitosamente")
+                            st.info(f"📁 Archivo: {os.path.basename(filepath)}")
                             st.balloons()
+                            
+                            if st.button("➕ Medir otra piña", key="another"):
+                                del st.session_state.current_session
+                                st.rerun()
                     except Exception as e:
-                        st.error(f"❌ Error: {e}")
-                        MODULES_AVAILABLE = False
-                
-                if not MODULES_AVAILABLE:
-                    progress_bar = st.progress(0)
-                    status = st.empty()
+                        st.error(f"❌ Error guardando: {e}")
+            
+            with col2:
+                if st.button("🗑️ ELIMINAR Y DESCARTAR", use_container_width=True, key="delete_btn"):
+                    if 'confirm_delete' not in st.session_state:
+                        st.session_state.confirm_delete = False
                     
-                    stages = ["🔌 Inicializando...", "🔍 Calibrando...", "📡 Conectando...", 
-                             "📊 Capturando...", "🧮 Procesando...", "✅ Finalizando..."]
+                    if not st.session_state.confirm_delete:
+                        st.session_state.confirm_delete = True
+                        st.warning("⚠️ Presione nuevamente para confirmar eliminación")
+                    else:
+                        del st.session_state.current_session
+                        st.session_state.confirm_delete = False
+                        st.warning("🗑️ Datos eliminados")
+                        time.sleep(1)
+                        st.rerun()
+            
+            with col3:
+                if st.button("🔄 REPETIR CAPTURA", use_container_width=True, key="repeat_btn"):
+                    if 'current_session' in st.session_state:
+                        del st.session_state.current_session
                     
-                    for i, stage in enumerate(stages):
-                        status.info(stage)
-                        for j in range(5):
-                            progress_bar.progress((i * 5 + j + 1) / 30)
-                            time.sleep(0.08)
-                    
-                    profiles = {
-                        ("Golden (MD-2)", "Verde"): {"r": (80, 120), "g": (100, 140), "b": (60, 90)},
-                        ("Golden (MD-2)", "Madura"): {"r": (150, 190), "g": (140, 180), "b": (80, 120)},
-                        ("Golden (MD-2)", "Sobre Madurada"): {"r": (200, 240), "g": (160, 200), "b": (70, 110)},
-                        ("Roja Española", "Verde"): {"r": (70, 110), "g": (110, 150), "b": (50, 80)},
-                        ("Roja Española", "Madura"): {"r": (180, 220), "g": (120, 160), "b": (70, 110)},
-                        ("Roja Española", "Sobre Madurada"): {"r": (220, 255), "g": (100, 140), "b": (60, 100)},
-                        ("Cayena", "Verde"): {"r": (90, 130), "g": (120, 160), "b": (70, 100)},
-                        ("Cayena", "Madura"): {"r": (170, 210), "g": (150, 190), "b": (90, 130)},
-                        ("Cayena", "Sobre Madurada"): {"r": (210, 250), "g": (140, 180), "b": (80, 120)},
-                    }
-                    
-                    key = (st.session_state.pineapple_type, st.session_state.maturity_state)
-                    ranges = profiles.get(key, {"r": (100, 200), "g": (100, 200), "b": (100, 200)})
-                    
-                    r_vals = np.clip(np.random.normal(np.mean(ranges["r"]), 15, DATA_POINTS_FILTERED), 0, 255).astype(int).tolist()
-                    g_vals = np.clip(np.random.normal(np.mean(ranges["g"]), 12, DATA_POINTS_FILTERED), 0, 255).astype(int).tolist()
-                    b_vals = np.clip(np.random.normal(np.mean(ranges["b"]), 10, DATA_POINTS_FILTERED), 0, 255).astype(int).tolist()
-                    
-                    st.session_state.rgb_data = {
-                        "r_values": r_vals, "g_values": g_vals, "b_values": b_vals,
-                        "r_avg": np.mean(r_vals), "g_avg": np.mean(g_vals), "b_avg": np.mean(b_vals),
-                        "r_std": np.std(r_vals), "g_std": np.std(g_vals), "b_std": np.std(b_vals),
-                        "r_min": np.min(r_vals), "g_min": np.min(g_vals), "b_min": np.min(b_vals),
-                        "r_max": np.max(r_vals), "g_max": np.max(g_vals), "b_max": np.max(b_vals),
-                        "timestamp": datetime.now(),
-                        "variety": st.session_state.pineapple_type,
-                        "maturity": st.session_state.maturity_state,
-                        "session_id": f"CHR_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                    }
-                    
-                    progress_bar.empty()
-                    status.success("✅ Captura completada")
-                    st.balloons()
+                    st.info("🔄 Reiniciando captura... Manteniendo variedad y estado de madurez")
+                    time.sleep(1)
+                    st.rerun()
+    
     else:
         st.markdown("""
         <div class="alert-box alert-warning">
-            ⚠️ Complete: Variedad de piña → Estado de madurez → Captura
+            ⚠️ Complete los pasos anteriores: Variedad de piña → Estado de madurez → Captura
         </div>
         """, unsafe_allow_html=True)
 
 with tab4:
     st.markdown("<h3 style='text-align: center;'>Vista Previa</h3>", unsafe_allow_html=True)
     
-    if "rgb_data" in st.session_state:
-        data = st.session_state.rgb_data
+    if "current_session" in st.session_state and st.session_state.current_session:
+        session = st.session_state.current_session
         col1, col2, col3 = st.columns(3)
         
-        for i, (channel, color, icon) in enumerate([("r", "Rojo", "🔴"), ("g", "Verde", "🟢"), ("b", "Azul", "🔵")]):
+        for i, (channel, color, icon) in enumerate([("red", "Rojo", "🔴"), ("green", "Verde", "🟢"), ("blue", "Azul", "🔵")]):
             with [col1, col2, col3][i]:
+                avg_value = session.global_averages.get(channel, 0)
                 st.markdown(f"""
                 <div class="metric-box">
                     <div class="metric-icon">{icon}</div>
-                    <div class="metric-value">{data[f'{channel}_avg']:.1f}</div>
+                    <div class="metric-value">{avg_value:.1f}</div>
                     <div class="metric-label">{color}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -875,7 +1016,7 @@ with tab5:
                 <tr><td style="padding:0.7rem 0;">🖥️ Plataforma</td><td style="text-align:center;">{platform}</td></tr>
                 <tr><td style="padding:0.7rem 0;">⚙️ Config</td><td style="text-align:center;">{'✅ OK' if CONFIG_AVAILABLE else '⚠️ Básica'}</td></tr>
                 <tr><td style="padding:0.7rem 0;">📦 Módulos</td><td style="text-align:center;">{f'✅ {MODULE_SOURCE}' if MODULES_AVAILABLE else '❌ No disp.'}</td></tr>
-                <tr><td style="padding:0.7rem 0;">🎯 Modo</td><td style="text-align:center;">{'Hardware' if MODULES_AVAILABLE else 'Simulación'}</td></tr>
+                <tr><td style="padding:0.7rem 0;">🎯 Modo</td><td style="text-align:center;">{'Hardware' if MODULES_AVAILABLE else 'Sin Hardware'}</td></tr>
             </table>
         </div>
         """, unsafe_allow_html=True)
@@ -887,145 +1028,11 @@ with tab5:
             <table style="width:100%; text-align:center;">
                 <tr><td style="padding:0.7rem 0;">🔬 Modelo</td><td style="text-align:center;">{COLOR_SENSOR_CONFIG['model']}</td></tr>
                 <tr><td style="padding:0.7rem 0;">📊 Canales</td><td style="text-align:center;">{', '.join(COLOR_SENSOR_CONFIG['channels'])}</td></tr>
-                <tr><td style="padding:0.7rem 0;">🎯 Puntos</td><td style="text-align:center;">{DATA_POINTS_FILTERED}</td></tr>
+                <tr><td style="padding:0.7rem 0;">🎯 Puntos</td><td style="text-align:center;">{DATA_POINTS_TOTAL}</td></tr>
                 <tr><td style="padding:0.7rem 0;">🎛️ Precisión</td><td style="text-align:center;">±2% RGB</td></tr>
             </table>
         </div>
         """, unsafe_allow_html=True)
-
-# ============================================================================
-# ANÁLISIS DETALLADO
-# ============================================================================
-
-if "rgb_data" in st.session_state:
-    st.markdown("""
-    <div class="section-separator">
-        <div class="section-title-box">📊 Análisis RGB</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    data = st.session_state.rgb_data
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    metrics = [
-        {"icon": "🔴", "value": f"{data['r_avg']:.1f}", "label": "Rojo", "detail": f"σ={data['r_std']:.2f}"},
-        {"icon": "🟢", "value": f"{data['g_avg']:.1f}", "label": "Verde", "detail": f"σ={data['g_std']:.2f}"},
-        {"icon": "🔵", "value": f"{data['b_avg']:.1f}", "label": "Azul", "detail": f"σ={data['b_std']:.2f}"},
-        {"icon": "⚡", "value": f"{data['r_avg']+data['g_avg']+data['b_avg']:.0f}", "label": "Intensidad", "detail": "Total"},
-        {"icon": max([('🔴', data['r_avg']), ('🟢', data['g_avg']), ('🔵', data['b_avg'])], key=lambda x: x[1])[0], 
-         "value": "Dominante", "label": max([('R', data['r_avg']), ('G', data['g_avg']), ('B', data['b_avg'])], key=lambda x: x[1])[0], 
-         "detail": f"{max([data['r_avg'], data['g_avg'], data['b_avg']]):.1f}"}
-    ]
-    
-    for i, m in enumerate(metrics):
-        with [col1, col2, col3, col4, col5][i]:
-            st.markdown(f"""
-            <div class="metric-box">
-                <div class="metric-icon">{m['icon']}</div>
-                <div class="metric-value">{m['value']}</div>
-                <div class="metric-label">{m['label']}</div>
-                <div class="metric-detail">{m['detail']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("<h3 style='text-align: center;'>Valores RGB Capturados</h3>", unsafe_allow_html=True)
-        
-        fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3], vertical_spacing=0.12,
-                           subplot_titles=('Serie Temporal', 'Distribución'))
-        
-        for channel, color, name in [('r', '#ef4444', 'Rojo'), ('g', '#22c55e', 'Verde'), ('b', '#3b82f6', 'Azul')]:
-            fig.add_trace(go.Scatter(y=data[f'{channel}_values'], mode='lines+markers', name=name,
-                                    line=dict(color=color, width=2.5), marker=dict(size=5)), row=1, col=1)
-            fig.add_trace(go.Histogram(x=data[f'{channel}_values'], name=name, marker_color=color, 
-                                      opacity=0.7, showlegend=False), row=2, col=1)
-        
-        fig.update_layout(height=550, hovermode='x unified', barmode='overlay',
-                         plot_bgcolor='rgba(248,249,250,0.8)', paper_bgcolor='white')
-        fig.update_xaxes(title_text="Punto", row=1, col=1)
-        fig.update_yaxes(title_text="Valor RGB", row=1, col=1)
-        
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.markdown("<h3 style='text-align: center;'>Muestra de Color</h3>", unsafe_allow_html=True)
-        
-        r, g, b = int(data['r_avg']), int(data['g_avg']), int(data['b_avg'])
-        st.markdown(f"""
-        <div class="color-display" style="height:180px; background:rgb({r},{g},{b});"></div>
-        <div style="text-align:center; margin-top:1rem;">
-            <div style="font-size:1.2rem; font-weight:700;">RGB({r}, {g}, {b})</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        def rgb_to_hsv(r, g, b):
-            r, g, b = r/255, g/255, b/255
-            mx, mn = max(r,g,b), min(r,g,b)
-            h = s = v = mx
-            d = mx - mn
-            s = 0 if mx == 0 else d/mx
-            if d != 0:
-                if mx == r: h = (60*((g-b)/d)+360)%360
-                elif mx == g: h = (60*((b-r)/d)+120)%360
-                elif mx == b: h = (60*((r-g)/d)+240)%360
-            return h, s*100, v*100
-        
-        h, s, v = rgb_to_hsv(r, g, b)
-        st.markdown(f"""
-        <div class="card-modern" style="padding:1.2rem; margin-top:1rem;">
-            <strong>🌈 Matiz:</strong> {h:.1f}°<br>
-            <strong>💫 Saturación:</strong> {s:.1f}%<br>
-            <strong>☀️ Brillo:</strong> {v:.1f}%
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("<h3 style='text-align: center;'>Estadísticas y Correlación</h3>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        stats_df = pd.DataFrame({
-            'Canal': ['Rojo', 'Verde', 'Azul'],
-            'Media': [data['r_avg'], data['g_avg'], data['b_avg']],
-            'Desv.Est.': [data['r_std'], data['g_std'], data['b_std']],
-            'Min': [data['r_min'], data['g_min'], data['b_min']],
-            'Max': [data['r_max'], data['g_max'], data['b_max']]
-        }).round(2)
-        st.dataframe(stats_df, use_container_width=True, hide_index=True)
-    
-    with col2:
-        corr = np.corrcoef([data['r_values'], data['g_values'], data['b_values']])
-        fig_corr = go.Figure(data=go.Heatmap(
-            z=corr, x=['R','G','B'], y=['R','G','B'],
-            colorscale='RdBu', zmid=0, text=np.round(corr, 3),
-            texttemplate='%{text}', textfont={"size":13, "color":"white"}
-        ))
-        fig_corr.update_layout(height=250, margin=dict(l=0,r=0,t=20,b=0))
-        st.plotly_chart(fig_corr, use_container_width=True)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("💾 Exportar CSV", use_container_width=True):
-            df = pd.DataFrame({
-                'Punto': range(1, len(data['r_values'])+1),
-                'R': data['r_values'], 'G': data['g_values'], 'B': data['b_values']
-            })
-            st.download_button("⬇️ Descargar", df.to_csv(index=False), 
-                             f"{data['session_id']}.csv", "text/csv", use_container_width=True)
-    with col2:
-        if st.button("🔄 Nueva Captura", use_container_width=True):
-            del st.session_state.rgb_data
-            st.rerun()
-    with col3:
-        st.button("🤖 Predecir (Pronto)", use_container_width=True, disabled=True)
-
-# ============================================================================
-# FOOTER
-# ============================================================================
 
 st.markdown(f"""
 <div class="footer-box">
@@ -1039,7 +1046,7 @@ st.markdown(f"""
         <div style="border-top:1px solid rgba(255,255,255,0.15); padding-top:1.5rem;">
             <div style="opacity:0.85;">© 2025 Chromabot System | Fase 1/3 - Recolección de Datos</div>
             <div style="opacity:0.7; margin-top:0.8rem; font-size:0.9rem;">
-                🕒 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+                🕐 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
             </div>
         </div>
     </div>
