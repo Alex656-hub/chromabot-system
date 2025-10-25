@@ -157,7 +157,7 @@ class RGBDataCapture:
             st.error(f"❌ Error iniciando sesión: {e}")
             return False
     
-    def capture_rgb_data(self) -> Optional[CaptureSession]:
+    def capture_rgb_data(self, sections: Optional[List[str]] = None, reset_session: bool = True) -> Optional[CaptureSession]:
         """
         Captura completa de datos RGB (60 mediciones en 3 secciones)
         """
@@ -166,8 +166,21 @@ class RGBDataCapture:
             return None
         
         try:
+            sections_to_capture = sections or MEASUREMENT_SECTIONS
+            sections_to_capture = [section for section in sections_to_capture if section in SECTION_CONFIG]
+            if not sections_to_capture:
+                st.error("❌ No hay secciones válidas seleccionadas para capturar.")
+                return None
+
+            if not reset_session and self.current_session.section_data:
+                pending_sections = [s for s in sections_to_capture if s not in self.current_session.section_data]
+                if not pending_sections:
+                    st.warning("⚠️ Las secciones seleccionadas ya fueron capturadas en esta sesión.")
+                    return self.current_session
+                sections_to_capture = pending_sections
+
             if self.arduino and hasattr(self.arduino, 'is_connected') and self.arduino.is_connected:
-                success = self._capture_real_data()
+                success = self._capture_real_data(sections_to_capture, reset_session=reset_session)
             else:
                 st.error("❌ Arduino no conectado. Conecte el sensor TCS3200 primero.")
                 return None
@@ -189,15 +202,16 @@ class RGBDataCapture:
             st.error(f"❌ Error durante captura: {e}")
             return None
     
-    def _capture_real_data(self) -> bool:
+    def _capture_real_data(self, sections: List[str], reset_session: bool = True) -> bool:
         """Captura datos reales desde Arduino con secciones"""
         try:
             st.info("📡 Iniciando captura con sensor TCS3200...")
             
-            self.current_session.all_readings = []
-            self.current_session.section_data = {}
+            if reset_session or not self.current_session.section_data:
+                self.current_session.all_readings = []
+                self.current_session.section_data = {}
             
-            for section_name in MEASUREMENT_SECTIONS:
+            for section_name in sections:
                 section_config = SECTION_CONFIG[section_name]
                 
                 st.markdown(f"""
@@ -212,7 +226,7 @@ class RGBDataCapture:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                time.sleep(2)
+                time.sleep(1)
                 
                 progress_bar = st.progress(0)
                 status_text = st.empty()
@@ -251,7 +265,7 @@ class RGBDataCapture:
                         f"RGB: ({reading.red}, {reading.green}, {reading.blue})"
                     )
                     
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                 
                 section_end_time = datetime.now()
                 
@@ -266,7 +280,7 @@ class RGBDataCapture:
                 
                 progress_bar.empty()
                 status_text.success(f"✅ Sección {section_name} completada: {len(section_readings)} lecturas")
-                time.sleep(0.3)
+                time.sleep(0.15)
             
             self._calculate_global_statistics()
             
@@ -460,13 +474,14 @@ def initialize_capture_system(arduino_interface=None) -> RGBDataCapture:
 def capture_rgb_sample(capture_system: RGBDataCapture, 
                       pineapple_type: str, 
                       maturity_state: str,
-                      notes: str = "") -> Optional[CaptureSession]:
+                      notes: str = "",
+                      sections: Optional[List[str]] = None) -> Optional[CaptureSession]:
     """Función simplificada para capturar una muestra completa"""
     
     if not capture_system.start_capture_session(pineapple_type, maturity_state, notes):
         return None
     
-    session = capture_system.capture_rgb_data()
+    session = capture_system.capture_rgb_data(sections=sections, reset_session=True)
     
     return session
 

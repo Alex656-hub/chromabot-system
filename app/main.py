@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Chromabot | Sistema Inteligente de Análisis RGB",
@@ -558,26 +559,31 @@ except ImportError:
     CONFIG_AVAILABLE = False
 
 MODULES_AVAILABLE = False
+MODULE_SOURCE = "no_disponible"
+
+import sys
+src_path = os.path.join(os.path.dirname(__file__), '..', 'src')
+if os.path.exists(src_path):
+    abs_src_path = os.path.abspath(src_path)
+    if abs_src_path not in sys.path:
+        sys.path.insert(0, abs_src_path)
+
 try:
-    from src import (
-        RGBDataCapture, capture_rgb_sample, RGBDataProcessor,
-        process_capture_session, ChromabotExporter, export_single_session_simple,
-        initialize_color_sensor
-    )
+    from src.data_capture import RGBDataCapture, capture_rgb_sample
+    from src.data_processing import RGBDataProcessor, process_capture_session
+    from src.export_utils import ChromabotExporter, export_single_session_simple
+    from src.arduino_interface import initialize_color_sensor
     MODULES_AVAILABLE = True
-    MODULE_SOURCE = "paquete_instalado"
+    MODULE_SOURCE = "path_relativo"
 except ImportError:
     try:
-        import sys
-        src_path = os.path.join(os.path.dirname(__file__), '..', 'src')
-        if os.path.exists(src_path):
-            sys.path.insert(0, os.path.abspath(src_path))
-        from src.data_capture import RGBDataCapture, capture_rgb_sample
-        from src.data_processing import RGBDataProcessor, process_capture_session
-        from src.export_utils import ChromabotExporter, export_single_session_simple
-        from src.arduino_interface import initialize_color_sensor
+        from src import (
+            RGBDataCapture, capture_rgb_sample, RGBDataProcessor,
+            process_capture_session, ChromabotExporter, export_single_session_simple,
+            initialize_color_sensor
+        )
         MODULES_AVAILABLE = True
-        MODULE_SOURCE = "path_relativo"
+        MODULE_SOURCE = "paquete_instalado"
     except ImportError:
         MODULE_SOURCE = "no_disponible"
 
@@ -623,6 +629,18 @@ if MODULES_AVAILABLE and "capture_system" not in st.session_state:
     st.session_state.exporter = ChromabotExporter()
     st.session_state.captured_sessions = []
     st.session_state.sensor_connected = False
+    st.session_state.capture_session_active = False
+    st.session_state.completed_sections = []
+    st.session_state.remaining_sections = MEASUREMENT_SECTIONS.copy()
+    st.session_state.selected_section = MEASUREMENT_SECTIONS[0] if MEASUREMENT_SECTIONS else None
+    st.session_state.current_session = None
+    st.session_state.current_section = None
+    st.session_state.last_captured_section = None
+    st.session_state.capture_in_progress = False
+    st.session_state.pending_sample_code = None
+    st.session_state.next_sample_code = None
+    st.session_state.next_sample_code_for = None
+    st.session_state.force_capture_tab = False
 
 if MODULES_AVAILABLE:
     with st.expander("🔌 Conexión del sensor Arduino", expanded=False):
@@ -653,6 +671,33 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["🍍 Variedad", "🌱 Madurez", "📸 Captura", "📊 Resultados", "⚙️ Sistema"])
+
+if st.session_state.get("force_capture_tab"):
+    components.html(
+        """
+        <script>
+        (function() {
+            const selectors = ['button[data-baseweb="tab"]', 'button[role="tab"]'];
+            const clickCaptureTab = () => {
+                for (const selector of selectors) {
+                    const tabButtons = window.parent.document.querySelectorAll(selector);
+                    if (tabButtons && tabButtons.length >= 3) {
+                        tabButtons[2].click();
+                        return true;
+                    }
+                }
+                return false;
+            };
+            if (!clickCaptureTab()) {
+                setTimeout(clickCaptureTab, 200);
+                setTimeout(clickCaptureTab, 400);
+            }
+        })();
+        </script>
+        """,
+        height=0,
+    )
+    st.session_state.force_capture_tab = False
 
 with tab1:
     st.markdown("<h3 style='text-align: center;'>Selección de Variedad de Piña</h3>", unsafe_allow_html=True)
@@ -712,31 +757,56 @@ with tab2:
         """, unsafe_allow_html=True)
 
 with tab3:
-    st.markdown("<h3 style='text-align: center;'>Proceso de Captura RGB</h3>", unsafe_allow_html=True)
     
     if "pineapple_type" in st.session_state and "maturity_state" in st.session_state:
         
-        col1, col2, col3, col4 = st.columns(4)
-        
-        metrics_data = [
-            {"icon": "🍍", "value": str(st.session_state.pineapple_code), "label": st.session_state.pineapple_type},
-            {"icon": "🌱", "value": str(st.session_state.maturity_code), "label": st.session_state.maturity_state},
-            {"icon": "📊", "value": str(DATA_POINTS_TOTAL), "label": "Lecturas Totales"},
-            {"icon": "⏱️", "value": "~12s", "label": "Tiempo Estimado"}
-        ]
-        
-        for i, metric in enumerate(metrics_data):
-            with [col1, col2, col3, col4][i]:
-                st.markdown(f"""
-                <div class="metric-box">
-                    <div class="metric-icon">{metric['icon']}</div>
-                    <div class="metric-value">{metric['value']}</div>
-                    <div class="metric-label">{metric['label']}</div>
+        session = st.session_state.capture_system.current_session if st.session_state.capture_system else None
+        active_code = None
+        if session and session.sample_id:
+            active_code = session.sample_id
+        elif st.session_state.get("pending_sample_code"):
+            active_code = st.session_state.pending_sample_code
+
+        if active_code:
+            st.markdown(f"""
+            <div class="alert-box alert-info" style="border-radius: 16px; display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <strong>📌 Código de piña activo:</strong> {active_code}
                 </div>
-                """, unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
+                <div style="opacity:0.8;">Seleccione las tres secciones para esta misma piña</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="alert-box alert-warning" style="border-radius: 16px;">
+                ⚠️ Inicie una captura para generar el código de la piña actual.
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.subheader("🧩 Seleccione la sección a capturar")
+        if st.session_state.get("capture_session_active"):
+            pending_sections = st.session_state.remaining_sections
+            if not pending_sections:
+                st.success("✅ Todas las secciones fueron capturadas para este código. Vaya a Resultados para revisar o reinicie para una nueva piña.")
+                st.session_state.selected_section = None
+            else:
+                default_option = pending_sections[0]
+                chosen_option = st.radio(
+                    "Seleccione la siguiente sección para el mismo código de piña:",
+                    options=pending_sections,
+                    index=0,
+                    horizontal=True
+                )
+                st.session_state.selected_section = chosen_option
+                st.info(f"📌 Capturando código {st.session_state.current_session.sample_id if st.session_state.current_session else st.session_state.pending_sample_code}")
+        else:
+            chosen_option = st.selectbox(
+                "Seleccione la sección inicial de captura:",
+                options=MEASUREMENT_SECTIONS,
+                index=0
+            )
+            st.session_state.selected_section = chosen_option
+
         if "capture_in_progress" in st.session_state and st.session_state.capture_in_progress:
             current_section = st.session_state.get('current_section', 'MEDIA')
             completed_sections = st.session_state.get('completed_sections', [])
@@ -773,189 +843,288 @@ with tab3:
             
             st.markdown("<br>", unsafe_allow_html=True)
         
-        if "current_session" not in st.session_state:
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                if st.button("🚀 INICIAR CAPTURA", use_container_width=True, key="capture_start"):
-                    st.session_state.capture_in_progress = True
-                    st.session_state.current_section = MEASUREMENT_SECTIONS[0]
-                    st.session_state.completed_sections = []
-                    
-                    if MODULES_AVAILABLE:
-                        st.info("📡 Captura con sensor físico...")
-                        try:
-                            session = capture_rgb_sample(
-                                st.session_state.capture_system,
-                                st.session_state.pineapple_type,
-                                st.session_state.maturity_state,
-                                notes=f"Web {datetime.now().strftime('%H:%M:%S')}"
-                            )
-                            if session:
-                                st.success("✅ Captura completada")
-                                st.session_state.current_session = session
-                                st.session_state.capture_in_progress = False
-                                st.balloons()
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error: {e}")
-                    else:
-                        st.error("❌ Arduino no conectado. Conecte el sensor TCS3200.")
+        def _start_capture(selected_sections, reset_session=True):
+            capture_system = st.session_state.capture_system
+            st.session_state.capture_in_progress = True
+            st.session_state.current_section = selected_sections[0]
+
+            try:
+                if reset_session or capture_system.current_session is None:
+                    if not capture_system.start_capture_session(
+                        st.session_state.pineapple_type,
+                        st.session_state.maturity_state,
+                        notes=f"Web {datetime.now().strftime('%H:%M:%S')}"
+                    ):
                         st.session_state.capture_in_progress = False
+                        return
+                    session = capture_system.current_session
+                    if session:
+                        st.session_state.pending_sample_code = session.sample_id
+
+                session = capture_system.capture_rgb_data(
+                    sections=selected_sections,
+                    reset_session=reset_session
+                )
+
+                if session:
+                    st.success("✅ Captura completada")
+                    st.session_state.current_session = session
+                    st.session_state.capture_session_active = True
+                    if reset_session:
+                        st.session_state.completed_sections = []
+                    completed = st.session_state.completed_sections
+                    for section in selected_sections:
+                        if section not in completed:
+                            completed.append(section)
+                    st.session_state.remaining_sections = [
+                        s for s in MEASUREMENT_SECTIONS if s not in completed
+                    ]
+                    st.session_state.last_captured_section = selected_sections[-1]
+                    st.session_state.selected_section = (
+                        st.session_state.remaining_sections[0]
+                        if st.session_state.remaining_sections else None
+                    )
+                    st.balloons()
+                    st.session_state.capture_in_progress = False
+                    st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+                st.session_state.capture_in_progress = False
+
+        if st.session_state.get("capture_session_active"):
+            if st.session_state.remaining_sections:
+                col1, col2 = st.columns([2,1])
+                with col1:
+                    if st.button("➡️ Capturar sección seleccionada", use_container_width=True, key="capture_section_next"):
+                        selected_option = st.session_state.selected_section
+                        if selected_option:
+                            _start_capture([selected_option], reset_session=False)
+                with col2:
+                    if st.button("🔄 Reiniciar captura", use_container_width=True, key="reset_capture"):
+                        st.session_state.capture_session_active = False
+                        st.session_state.current_session = None
+                        st.session_state.completed_sections = []
+                        st.session_state.remaining_sections = MEASUREMENT_SECTIONS.copy()
+                        st.session_state.capture_system.reset_session()
+                        st.session_state.selected_section = MEASUREMENT_SECTIONS[0] if MEASUREMENT_SECTIONS else None
+                        st.session_state.last_captured_section = None
+                        st.rerun()
+            else:
+                if st.button("🔄 Reiniciar captura completa", use_container_width=True, key="reset_full_capture"):
+                    st.session_state.capture_session_active = False
+                    st.session_state.current_session = None
+                    st.session_state.completed_sections = []
+                    st.session_state.remaining_sections = MEASUREMENT_SECTIONS.copy()
+                    st.session_state.capture_system.reset_session()
+                    st.session_state.selected_section = MEASUREMENT_SECTIONS[0] if MEASUREMENT_SECTIONS else None
+                    st.session_state.last_captured_section = None
+                    st.rerun()
+        else:
+            col1, col2 = st.columns([2,1])
+            with col1:
+                if st.button("🚀 Iniciar captura", use_container_width=True, key="capture_start_initial"):
+                    selected_option = st.session_state.selected_section
+                    if selected_option:
+                        _start_capture([selected_option], reset_session=True)
+            with col2:
+                if st.button("🔁 Capturar todas las secciones", use_container_width=True, key="capture_all_sections"):
+                    _start_capture(MEASUREMENT_SECTIONS, reset_session=True)
         
         if "current_session" in st.session_state and st.session_state.current_session:
             session = st.session_state.current_session
-            
             st.markdown("---")
-            st.markdown("## 📋 Verificación de Datos Capturados")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.info(f"""
-                **📝 Información de la Muestra**
-                - **Código:** {session.sample_id}
-                - **Variedad:** {session.pineapple_type}
-                - **Estado:** {session.maturity_state}
-                """)
-            
-            with col2:
-                st.info(f"""
-                **⏱️ Detalles de Captura**
-                - **Fecha:** {session.capture_timestamp.strftime('%Y-%m-%d')}
-                - **Hora:** {session.capture_timestamp.strftime('%H:%M:%S')}
-                - **Total lecturas:** {len(session.all_readings)}
-                - **Secciones:** {len(session.section_data)}
-                """)
-            
-            st.markdown("### 📊 Estadísticas por Sección")
-            
-            for section_name in MEASUREMENT_SECTIONS:
-                if section_name in session.section_data:
-                    section_data = session.section_data[section_name]
-                    config = SECTION_CONFIG[section_name]
-                    
-                    with st.expander(f"{config['icon']} {section_name} - {len(section_data.readings)} lecturas", expanded=True):
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            st.metric("🔴 Rojo", 
-                                     f"{section_data.averages['red']:.1f}",
-                                     f"±{section_data.statistics['red']['std']:.1f}")
-                        
-                        with col2:
-                            st.metric("🟢 Verde",
-                                     f"{section_data.averages['green']:.1f}",
-                                     f"±{section_data.statistics['green']['std']:.1f}")
-                        
-                        with col3:
-                            st.metric("🔵 Azul",
-                                     f"{section_data.averages['blue']:.1f}",
-                                     f"±{section_data.statistics['blue']['std']:.1f}")
-                        
-                        with col4:
-                            cv_status = "✅" if section_data.cv_percentage < VALIDATION_CONFIG["max_cv_percentage"] else "⚠️"
-                            st.metric("📊 CV", 
-                                     f"{section_data.cv_percentage:.2f}%",
-                                     f"{cv_status}")
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.write(f"**Quality Score:** {section_data.quality_score:.1f}/1.0")
-                        with col2:
-                            st.write(f"**Outliers:** {section_data.outliers_count}")
-                        with col3:
-                            duration = (section_data.timestamp_end - section_data.timestamp_start).total_seconds()
-                            st.write(f"**Duración:** {duration:.1f}s")
-            
-            st.markdown("### 📈 Comparación Visual entre Secciones")
-            
-            sections_list = list(session.section_data.keys())
-            
-            fig = go.Figure()
-            
-            for channel, color in [('red', '#ef4444'), ('green', '#22c55e'), ('blue', '#3b82f6')]:
-                values = [session.section_data[s].averages[channel] for s in sections_list]
-                stds = [session.section_data[s].statistics[channel]['std'] for s in sections_list]
+            st.markdown("## 📋 Resumen rápido")
+            st.info(f"Código activo: {session.sample_id} | Secciones capturadas: {len(session.section_data)}/3")
+        else:
+            st.markdown("""
+            <div class="alert-box alert-info">
+                ℹ️ Seleccione "Iniciar captura" para generar el código de piña y comenzar las mediciones.
+            </div>
+            """, unsafe_allow_html=True)
+
+with tab4:
+    st.markdown("<h3 style='text-align: center;'>Resultados</h3>", unsafe_allow_html=True)
+    
+    if "current_session" in st.session_state and st.session_state.current_session:
+        session = st.session_state.current_session
+        
+        st.markdown("---")
+        st.markdown("## 📋 Verificación de Datos Capturados")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info(f"""
+            **📝 Información de la Muestra**
+            - **Código:** {session.sample_id}
+            - **Variedad:** {session.pineapple_type}
+            - **Estado:** {session.maturity_state}
+            """)
+        
+        with col2:
+            st.info(f"""
+            **⏱️ Detalles de Captura**
+            - **Fecha:** {session.capture_timestamp.strftime('%Y-%m-%d')}
+            - **Hora:** {session.capture_timestamp.strftime('%H:%M:%S')}
+            - **Total lecturas:** {len(session.all_readings)}
+            - **Secciones:** {len(session.section_data)}
+            """)
+        
+        st.markdown("### 📊 Estadísticas por Sección")
+        
+        for section_name in MEASUREMENT_SECTIONS:
+            if section_name in session.section_data:
+                section_data = session.section_data[section_name]
+                config = SECTION_CONFIG[section_name]
                 
-                fig.add_trace(go.Bar(
-                    name=channel.upper(),
-                    x=sections_list,
-                    y=values,
-                    error_y=dict(type='data', array=stds),
-                    marker_color=color
-                ))
+                with st.expander(f"{config['icon']} {section_name} - {len(section_data.readings)} lecturas", expanded=True):
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("🔴 Rojo", 
+                                 f"{section_data.averages['red']:.1f}",
+                                 f"±{section_data.statistics['red']['std']:.1f}")
+                    
+                    with col2:
+                        st.metric("🟢 Verde",
+                                 f"{section_data.averages['green']:.1f}",
+                                 f"±{section_data.statistics['green']['std']:.1f}")
+                    
+                    with col3:
+                        st.metric("🔵 Azul",
+                                 f"{section_data.averages['blue']:.1f}",
+                                 f"±{section_data.statistics['blue']['std']:.1f}")
+                    
+                    with col4:
+                        cv_status = "✅" if section_data.cv_percentage < VALIDATION_CONFIG["max_cv_percentage"] else "⚠️"
+                        st.metric("📊 CV", 
+                                 f"{section_data.cv_percentage:.2f}%",
+                                 f"{cv_status}")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.write(f"**Quality Score:** {section_data.quality_score:.1f}/1.0")
+                    with col2:
+                        st.write(f"**Outliers:** {section_data.outliers_count}")
+                    with col3:
+                        duration = (section_data.timestamp_end - section_data.timestamp_start).total_seconds()
+                        st.write(f"**Duración:** {duration:.1f}s")
+        
+        st.markdown("### 📈 Comparación Visual entre Secciones")
+        
+        sections_list = list(session.section_data.keys())
+        
+        fig = go.Figure()
+        
+        for channel, color in [('red', '#ef4444'), ('green', '#22c55e'), ('blue', '#3b82f6')]:
+            values = [session.section_data[s].averages[channel] for s in sections_list]
+            stds = [session.section_data[s].statistics[channel]['std'] for s in sections_list]
             
-            fig.update_layout(
-                barmode='group',
-                title="Promedios RGB por Sección (con desviación estándar)",
-                xaxis_title="Sección",
-                yaxis_title="Valor RGB",
-                height=450,
-                hovermode='x unified'
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown("### 📄 Vista Detallada de Lecturas")
-            
-            display_data = []
-            for reading in session.all_readings[:15]:
-                display_data.append({
-                    'Sección': reading.section,
-                    'Índice Sección': reading.section_index,
-                    'Índice Global': reading.global_index,
-                    'R': reading.red,
-                    'G': reading.green,
-                    'B': reading.blue,
-                    'Quality': f"{reading.quality_score:.2f}",
-                    'Timestamp': reading.timestamp.strftime('%H:%M:%S')
-                })
-            
-            df_display = pd.DataFrame(display_data)
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
-            
-            if len(session.all_readings) > 15:
-                with st.expander(f"📄 Ver todas las {len(session.all_readings)} lecturas"):
-                    all_data = []
-                    for reading in session.all_readings:
-                        all_data.append({
-                            'Sección': reading.section,
-                            'Idx_Secc': reading.section_index,
-                            'Idx_Global': reading.global_index,
-                            'R': reading.red,
-                            'G': reading.green,
-                            'B': reading.blue,
-                            'Quality': f"{reading.quality_score:.2f}",
-                            'Hora': reading.timestamp.strftime('%H:%M:%S.%f')[:-3]
-                        })
-                    df_all = pd.DataFrame(all_data)
-                    st.dataframe(df_all, use_container_width=True, hide_index=True, height=400)
-            
+            fig.add_trace(go.Bar(
+                name=channel.upper(),
+                x=sections_list,
+                y=values,
+                error_y=dict(type='data', array=stds),
+                marker_color=color
+            ))
+        
+        fig.update_layout(
+            barmode='group',
+            title="Promedios RGB por Sección (con desviación estándar)",
+            xaxis_title="Sección",
+            yaxis_title="Valor RGB",
+            height=450,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.markdown("### 📄 Vista Detallada de Lecturas")
+        
+        display_data = []
+        for reading in session.all_readings[:15]:
+            display_data.append({
+                'Sección': reading.section,
+                'Índice Sección': reading.section_index,
+                'Índice Global': reading.global_index,
+                'R': reading.red,
+                'G': reading.green,
+                'B': reading.blue,
+                'Quality': f"{reading.quality_score:.2f}",
+                'Timestamp': reading.timestamp.strftime('%H:%M:%S')
+            })
+        
+        df_display = pd.DataFrame(display_data)
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        
+        if len(session.all_readings) > 15:
+            with st.expander(f"📄 Ver todas las {len(session.all_readings)} lecturas"):
+                all_data = []
+                for reading in session.all_readings:
+                    all_data.append({
+                        'Sección': reading.section,
+                        'Idx_Secc': reading.section_index,
+                        'Idx_Global': reading.global_index,
+                        'R': reading.red,
+                        'G': reading.green,
+                        'B': reading.blue,
+                        'Quality': f"{reading.quality_score:.2f}",
+                        'Hora': reading.timestamp.strftime('%H:%M:%S.%f')[:-3]
+                    })
+                df_all = pd.DataFrame(all_data)
+                st.dataframe(df_all, use_container_width=True, hide_index=True, height=400)
+        
+        if len(session.section_data) == len(MEASUREMENT_SECTIONS):
             st.markdown("### 🎯 Acciones Disponibles")
-            
             col1, col2, col3 = st.columns(3)
-            
+
             with col1:
                 if st.button("💾 GUARDAR DATOS", use_container_width=True, type="primary", key="save_btn"):
                     try:
                         exporter = ChromabotExporter()
                         filepath = exporter.export_single_session(session)
-                        
+
                         if filepath:
                             st.success(f"✅ Datos guardados exitosamente")
                             st.info(f"📁 Archivo: {os.path.basename(filepath)}")
                             st.balloons()
-                            
                             if st.button("➕ Medir otra piña", key="another"):
-                                del st.session_state.current_session
+                                capture_system = st.session_state.get("capture_system")
+                                if capture_system:
+                                    capture_system.reset_session()
+                                st.session_state.current_session = None
+                                st.session_state.capture_session_active = False
+                                st.session_state.completed_sections = []
+                                st.session_state.remaining_sections = MEASUREMENT_SECTIONS.copy()
+                                st.session_state.selected_section = MEASUREMENT_SECTIONS[0] if MEASUREMENT_SECTIONS else None
+                                st.session_state.pending_sample_code = None
+                                st.session_state.last_captured_section = None
+                                st.session_state.capture_in_progress = False
+
+                                pineapple_type = st.session_state.get("pineapple_type")
+                                maturity_state = st.session_state.get("maturity_state")
+
+                                if capture_system and pineapple_type and maturity_state:
+                                    if capture_system.start_capture_session(
+                                        pineapple_type,
+                                        maturity_state,
+                                        notes=f"Nueva piña {datetime.now().strftime('%H:%M:%S')}"
+                                    ):
+                                        st.session_state.pending_sample_code = capture_system.current_session.sample_id
+                                    else:
+                                        st.warning("⚠️ No se pudo iniciar la nueva sesión. Verifique la conexión del sensor.")
+                                else:
+                                    st.warning("⚠️ Seleccione variedad y madurez antes de medir otra piña.")
+
+                                st.session_state.force_capture_tab = True
                                 st.rerun()
                     except Exception as e:
                         st.error(f"❌ Error guardando: {e}")
-            
+
             with col2:
                 if st.button("🗑️ ELIMINAR Y DESCARTAR", use_container_width=True, key="delete_btn"):
                     if 'confirm_delete' not in st.session_state:
                         st.session_state.confirm_delete = False
-                    
+
                     if not st.session_state.confirm_delete:
                         st.session_state.confirm_delete = True
                         st.warning("⚠️ Presione nuevamente para confirmar eliminación")
@@ -965,40 +1134,17 @@ with tab3:
                         st.warning("🗑️ Datos eliminados")
                         time.sleep(1)
                         st.rerun()
-            
+
             with col3:
                 if st.button("🔄 REPETIR CAPTURA", use_container_width=True, key="repeat_btn"):
                     if 'current_session' in st.session_state:
                         del st.session_state.current_session
-                    
+
                     st.info("🔄 Reiniciando captura... Manteniendo variedad y estado de madurez")
                     time.sleep(1)
                     st.rerun()
-    
-    else:
-        st.markdown("""
-        <div class="alert-box alert-warning">
-            ⚠️ Complete los pasos anteriores: Variedad de piña → Estado de madurez → Captura
-        </div>
-        """, unsafe_allow_html=True)
-
-with tab4:
-    st.markdown("<h3 style='text-align: center;'>Vista Previa</h3>", unsafe_allow_html=True)
-    
-    if "current_session" in st.session_state and st.session_state.current_session:
-        session = st.session_state.current_session
-        col1, col2, col3 = st.columns(3)
-        
-        for i, (channel, color, icon) in enumerate([("red", "Rojo", "🔴"), ("green", "Verde", "🟢"), ("blue", "Azul", "🔵")]):
-            with [col1, col2, col3][i]:
-                avg_value = session.global_averages.get(channel, 0)
-                st.markdown(f"""
-                <div class="metric-box">
-                    <div class="metric-icon">{icon}</div>
-                    <div class="metric-value">{avg_value:.1f}</div>
-                    <div class="metric-label">{color}</div>
-                </div>
-                """, unsafe_allow_html=True)
+        else:
+            st.info("👀 Completa las secciones restantes para habilitar las acciones finales.")
     else:
         st.info("Complete la captura para ver resultados")
 
