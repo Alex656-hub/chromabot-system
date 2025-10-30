@@ -77,6 +77,67 @@ class ChromabotExporter:
         print(f"   - Backups: {self.backup_path}")
         print(f"   - Reportes: {self.reports_path}")
         print(f"   - Muestras: {self.samples_path}")
+        
+        # Ruta del archivo de contadores de exportación por tipo+madurez
+        self.counters_file = self.data_root / "export_counters.json"
+    
+    def _concise_base_from_sample(self, session_data: Any) -> Optional[str]:
+        """Construye base corta: chromabot_RGB_TxMy_YYYYMMDD a partir de sample_id.
+        Retorna None si no hay sample_id con el formato esperado.
+        """
+        sample_id = getattr(session_data, 'sample_id', None)
+        if not sample_id:
+            return None
+        parts = str(sample_id).split('_')
+        # Esperado: ["RGB", "TxMy", "YYYYMMDD", "HHMMSS"]
+        if len(parts) >= 3:
+            id_core = '_'.join(parts[:2])
+            date_part = parts[2]
+            return f"chromabot_{id_core}_{date_part}"
+        return f"chromabot_{sample_id}"
+    
+    def _get_sequence_key(self, session_data: Any) -> Optional[str]:
+        """Construye la clave de secuencia T{tipo}M{madurez} a partir de la sesión.
+        Retorna None si no hay datos suficientes.
+        """
+        try:
+            if hasattr(session_data, 'pineapple_code') and hasattr(session_data, 'maturity_code'):
+                return f"T{int(session_data.pineapple_code)}M{int(session_data.maturity_code)}"
+            # Soporte para dicts u otros formatos
+            p_code = getattr(session_data, 'pineapple_code', None) or session_data.get('pineapple_code')
+            m_code = getattr(session_data, 'maturity_code', None) or session_data.get('maturity_code')
+            if p_code is not None and m_code is not None:
+                return f"T{int(p_code)}M{int(m_code)}"
+        except Exception:
+            pass
+        return None
+    
+    def _next_sequence_for_key(self, key: str) -> str:
+        """Lee/actualiza el contador para la clave dada y retorna secuencia con 4 dígitos."""
+        counters: Dict[str, int] = {}
+        try:
+            if self.counters_file.exists():
+                with open(self.counters_file, 'r', encoding='utf-8') as f:
+                    counters = json.load(f)
+        except Exception:
+            counters = {}
+        
+        current = int(counters.get(key, 0)) + 1
+        counters[key] = current
+        try:
+            with open(self.counters_file, 'w', encoding='utf-8') as f:
+                json.dump(counters, f, indent=2)
+        except Exception:
+            # Si falla la persistencia, igual devolvemos el número en memoria
+            pass
+        return f"{current:04d}"
+    
+    def _next_sequence_from_session(self, session_data: Any) -> Optional[str]:
+        """Obtiene la secuencia 4 dígitos para la sesión (por tipo+madurez)."""
+        key = self._get_sequence_key(session_data)
+        if not key:
+            return None
+        return self._next_sequence_for_key(key)
     
     def export_single_session(self, session_data: Any, 
                             filename: Optional[str] = None,
@@ -103,8 +164,16 @@ class ChromabotExporter:
                 df = pd.DataFrame([export_data])
                 
                 if not filename:
-                    timestamp = datetime.now().strftime(EXPORT_CONFIG["date_format"])
-                    filename = f"{EXPORT_CONFIG['excel_filename']}_{timestamp}.xlsx"
+                    seq = self._next_sequence_from_session(session_data)
+                    base = self._concise_base_from_sample(session_data)
+                    if not base:
+                        # Fallback si no hay sample_id
+                        date_only = datetime.now().strftime("%Y%m%d")
+                        base = f"{EXPORT_CONFIG['excel_filename']}_{date_only}"
+                    if seq:
+                        filename = f"{base}_{seq}.xlsx"
+                    else:
+                        filename = f"{base}.xlsx"
                 
                 if not filename.endswith('.xlsx'):
                     filename += '.xlsx'
@@ -514,8 +583,17 @@ class ChromabotExporter:
             df = pd.DataFrame(rows)
             
             if not filename:
-                timestamp = datetime.now().strftime(EXPORT_CONFIG["date_format"])
-                filename = f"chromabot_detallado_{session_data.sample_id}_{timestamp}.csv"
+                seq = self._next_sequence_from_session(session_data)
+                base_short = self._concise_base_from_sample(session_data)
+                if base_short:
+                    base = f"chromabot_detallado_{base_short.replace('chromabot_', '')}"
+                else:
+                    date_only = datetime.now().strftime("%Y%m%d")
+                    base = f"chromabot_detallado_{date_only}"
+                if seq:
+                    filename = f"{base}_{seq}.csv"
+                else:
+                    filename = f"{base}.csv"
             
             if not filename.endswith('.csv'):
                 filename += '.csv'
@@ -548,8 +626,15 @@ class ChromabotExporter:
                 return self.export_single_session(session_data, filename)
             
             if not filename:
-                timestamp = datetime.now().strftime(EXPORT_CONFIG["date_format"])
-                filename = f"chromabot_{session_data.sample_id}_{timestamp}.xlsx"
+                seq = self._next_sequence_from_session(session_data)
+                base = self._concise_base_from_sample(session_data)
+                if not base:
+                    date_only = datetime.now().strftime("%Y%m%d")
+                    base = f"chromabot_{date_only}"
+                if seq:
+                    filename = f"{base}_{seq}.xlsx"
+                else:
+                    filename = f"{base}.xlsx"
             
             if not filename.endswith('.xlsx'):
                 filename += '.xlsx'
