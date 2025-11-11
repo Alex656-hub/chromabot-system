@@ -17,7 +17,7 @@ from app.config import (
 
 @dataclass
 class RGBReading:
-    """Estructura para una lectura RGB individual con información de sección"""
+    """Lectura RGB con metadatos de posición y calidad"""
     red: int
     green: int
     blue: int
@@ -28,7 +28,7 @@ class RGBReading:
     quality_score: float = 0.0
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convierte la lectura a diccionario para exportación"""
+        """Convierte a diccionario para exportación"""
         return {
             'red': self.red,
             'green': self.green,
@@ -42,7 +42,7 @@ class RGBReading:
 
 @dataclass
 class SectionData:
-    """Estadísticas y datos de una sección específica"""
+    """Datos y estadísticas de una sección de medición"""
     section_name: str
     readings: List[RGBReading]
     averages: Dict[str, float]
@@ -54,7 +54,7 @@ class SectionData:
     outliers_count: int = 0
     
     def get_summary_dict(self) -> Dict[str, Any]:
-        """Retorna resumen de la sección para exportación"""
+        """Genera resumen para exportación"""
         return {
             'section_name': self.section_name,
             'r_avg': self.averages['red'],
@@ -73,7 +73,7 @@ class SectionData:
 
 @dataclass
 class CaptureSession:
-    """Estructura para una sesión completa de captura con secciones"""
+    """Sesión de captura con múltiples secciones"""
     sample_id: str
     pineapple_type: str
     pineapple_code: int
@@ -82,21 +82,19 @@ class CaptureSession:
     
     section_data: Dict[str, SectionData]
     all_readings: List[RGBReading]
-    
     global_averages: Dict[str, float]
     global_statistics: Dict[str, Dict]
     overall_quality_score: float
-    
     capture_timestamp: datetime
     notes: str = ""
     is_simulation: bool = False
     
     def get_section_names(self) -> List[str]:
-        """Retorna nombres de secciones en orden"""
+        """Lista de secciones en orden"""
         return list(self.section_data.keys())
     
     def get_total_readings(self) -> int:
-        """Retorna total de lecturas capturadas"""
+        """Total de lecturas capturadas"""
         return len(self.all_readings)
     
     def is_complete(self) -> bool:
@@ -104,9 +102,7 @@ class CaptureSession:
         return len(self.all_readings) == DATA_POINTS_TOTAL
 
 class RGBDataCapture:
-    """
-    Clase principal para manejo de captura de datos RGB
-    """
+    """Maneja la captura de datos RGB del sensor"""
     
     def __init__(self, arduino_interface=None):
         self.arduino = arduino_interface
@@ -120,9 +116,7 @@ class RGBDataCapture:
     
     def start_capture_session(self, pineapple_type: str, maturity_state: str, 
                             notes: str = "") -> bool:
-        """
-        Inicia una nueva sesión de captura
-        """
+        """Inicia una nueva sesión de captura"""
         try:
             if pineapple_type not in PINEAPPLE_CODES:
                 st.error(f"❌ Tipo de piña inválido: {pineapple_type}")
@@ -158,9 +152,7 @@ class RGBDataCapture:
             return False
     
     def capture_rgb_data(self, sections: Optional[List[str]] = None, reset_session: bool = True) -> Optional[CaptureSession]:
-        """
-        Captura completa de datos RGB (60 mediciones en 3 secciones)
-        """
+        """Captura datos RGB en múltiples secciones"""
         if not self.current_session:
             st.error("❌ No hay sesión activa. Inicie una sesión primero.")
             return None
@@ -463,12 +455,12 @@ class RGBDataCapture:
         }
     
     def reset_session(self):
-        """Reinicia la sesión actual"""
+        """Reinicia sesión"""
         self.current_session = None
         st.info("🔄 Sesión reiniciada")
 
 def initialize_capture_system(arduino_interface=None) -> RGBDataCapture:
-    """Inicializa el sistema de captura"""
+    """Inicializa sistema de captura"""
     return RGBDataCapture(arduino_interface)
 
 def capture_rgb_sample(capture_system: RGBDataCapture, 
@@ -476,7 +468,7 @@ def capture_rgb_sample(capture_system: RGBDataCapture,
                       maturity_state: str,
                       notes: str = "",
                       sections: Optional[List[str]] = None) -> Optional[CaptureSession]:
-    """Función simplificada para capturar una muestra completa"""
+    """Captura muestra RGB completa"""
     
     if not capture_system.start_capture_session(pineapple_type, maturity_state, notes):
         return None
@@ -486,7 +478,7 @@ def capture_rgb_sample(capture_system: RGBDataCapture,
     return session
 
 def main():
-    """Función principal para testing desde línea de comandos"""
+    """Función principal"""
     print("🎨 Chromabot Data Capture - Test Mode")
     
     capture_system = RGBDataCapture()
