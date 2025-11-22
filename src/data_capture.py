@@ -432,12 +432,26 @@ class RGBDataCapture:
         return True
     
     def _generate_sample_id(self, pineapple_type: str, maturity_state: str) -> str:
-        """Genera ID único para la muestra"""
+        """Genera ID único para la muestra con formato: RGB_TxMy_YYYYMMDD_0001
+        
+        El número secuencial final (0001) se obtiene del contador correspondiente.
+        """
         type_code = PINEAPPLE_CODES[pineapple_type]
         maturity_code = MATURITY_STATES[maturity_state]
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        date_part = datetime.now().strftime("%Y%m%d")
         
-        return f"RGB_T{type_code}M{maturity_code}_{timestamp}"
+        # Obtener el siguiente número de secuencia para este tipo de piña y madurez
+        sequence_key = f"T{type_code}M{maturity_code}"
+        next_seq = self._get_next_sequence(sequence_key)
+        
+        return f"RGB_{sequence_key}_{date_part}_{next_seq:04d}"
+        
+    def _get_next_sequence(self, sequence_key: str) -> int:
+        """Obtiene el siguiente número de secuencia para la clave dada"""
+        # Este método debería implementar la lógica para obtener el siguiente número de secuencia
+        # basado en la clave (ej: T1M2). Por ahora, devuelve un número fijo para pruebas.
+        # En producción, esto debería leerse/actualizarse desde una base de datos o archivo.
+        return 1  # Temporal: siempre comienza en 1
     
     def get_session_summary(self) -> Optional[Dict]:
         """Retorna resumen de la sesión actual"""

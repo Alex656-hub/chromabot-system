@@ -115,29 +115,48 @@ class ChromabotExporter:
     def _next_sequence_for_key(self, key: str) -> str:
         """Lee/actualiza el contador para la clave dada y retorna secuencia con 4 dígitos."""
         counters: Dict[str, int] = {}
+        current = 1  # Valor por defecto si algo falla
+        
         try:
+            # 1. Intentar cargar contadores existentes
             if self.counters_file.exists():
                 with open(self.counters_file, 'r', encoding='utf-8') as f:
                     counters = json.load(f)
-        except Exception:
-            counters = {}
-        
-        current = int(counters.get(key, 0)) + 1
-        counters[key] = current
-        try:
+            
+            # 2. Obtener el siguiente número de secuencia
+            current = int(counters.get(str(key), 0)) + 1
+            
+            # 3. Actualizar los contadores
+            counters[str(key)] = current
+            
+            # 4. Guardar los contadores actualizados
             with open(self.counters_file, 'w', encoding='utf-8') as f:
                 json.dump(counters, f, indent=2)
-        except Exception:
-            # Si falla la persistencia, igual devolvemos el número en memoria
-            pass
-        return f"{current:04d}"
+                
+        except Exception as e:
+            print(f"⚠️ Error manejando contador: {e}")
+            # Si algo falla, continuamos con el valor por defecto o el actual
+        
+        # Aseguramos que siempre devolvamos un string de 4 dígitos
+        return f"{int(current):04d}"  # Convertir a int por si acaso
     
-    def _next_sequence_from_session(self, session_data: Any) -> Optional[str]:
-        """Obtiene la secuencia 4 dígitos para la sesión (por tipo+madurez)."""
-        key = self._get_sequence_key(session_data)
-        if not key:
-            return None
-        return self._next_sequence_for_key(key)
+    def _next_sequence_from_session(self, session_data: Any) -> str:
+        """Obtiene la secuencia 4 dígitos para la sesión (por tipo+madurez).
+        Si no se puede determinar la clave, devuelve '0001' como valor por defecto.
+        """
+        try:
+            key = self._get_sequence_key(session_data)
+            if not key:
+                # Si no se puede determinar la clave, usamos una secuencia genérica
+                return "0001"
+            result = self._next_sequence_for_key(key)
+            # Asegurarnos de que el resultado sea un string de 4 dígitos
+            if not isinstance(result, str) or not result.isdigit() or len(result) != 4:
+                return "0001"
+            return result
+        except Exception as e:
+            print(f"⚠️ Error en _next_sequence_from_session: {e}")
+            return "0001"
     
     def export_single_session(self, session_data: Any, 
                             filename: Optional[str] = None,
@@ -164,16 +183,24 @@ class ChromabotExporter:
                 df = pd.DataFrame([export_data])
                 
                 if not filename:
-                    seq = self._next_sequence_from_session(session_data)
+                    # Obtener la base del nombre del archivo (RGB_TxMy_YYYYMMDD)
                     base = self._concise_base_from_sample(session_data)
                     if not base:
-                        # Fallback si no hay sample_id
                         date_only = datetime.now().strftime("%Y%m%d")
                         base = f"{EXPORT_CONFIG['excel_filename']}_{date_only}"
-                    if seq:
-                        filename = f"{base}_{seq}.xlsx"
-                    else:
-                        filename = f"{base}.xlsx"
+                    
+                    # Obtener el siguiente número de secuencia
+                    seq = self._next_sequence_from_session(session_data)
+                    
+                    # Actualizar el sample_id con el número de secuencia correcto
+                    if hasattr(session_data, 'sample_id') and seq:
+                        # Extraer la parte del código sin el número de secuencia
+                        parts = session_data.sample_id.split('_')
+                        if len(parts) >= 3:
+                            base_id = '_'.join(parts[:3])  # RGB_TxMy_YYYYMMDD
+                            session_data.sample_id = f"{base_id}_{seq:04d}"
+                    
+                    filename = f"{base}_{seq:04d}.xlsx" if seq else f"{base}.xlsx"
                 
                 if not filename.endswith('.xlsx'):
                     filename += '.xlsx'
@@ -619,22 +646,35 @@ class ChromabotExporter:
         2. Resumen_Secciones: Estadísticas por sección
         3. Metadatos: Información de la medición
         """
-        
         try:
             if not hasattr(session_data, 'section_data') or not session_data.section_data:
                 st.warning("⚠️ Datos sin secciones. Usando exportación estándar.")
                 return self.export_single_session(session_data, filename)
             
+            # Obtener la secuencia
+            seq_str = self._next_sequence_from_session(session_data)
+            
+            # Asegurarnos de que seq_str sea un string de 4 dígitos
+            if not isinstance(seq_str, str) or not seq_str.isdigit() or len(seq_str) != 4:
+                seq_str = "0001"
+            
+            # Obtener la base del nombre de archivo
+            base = self._concise_base_from_sample(session_data)
+            if not base:
+                date_only = datetime.now().strftime("%Y%m%d")
+                base = f"chromabot_{date_only}"
+            
+            # Actualizar el sample_id con el número de secuencia correcto
+            if hasattr(session_data, 'sample_id'):
+                # Extraer la parte del código sin el número de secuencia
+                parts = str(session_data.sample_id).split('_')
+                if len(parts) >= 3:
+                    base_id = '_'.join(parts[:3])  # RGB_TxMy_YYYYMMDD
+                    session_data.sample_id = f"{base_id}_{seq_str}"
+            
+            # Generar el nombre del archivo
             if not filename:
-                seq = self._next_sequence_from_session(session_data)
-                base = self._concise_base_from_sample(session_data)
-                if not base:
-                    date_only = datetime.now().strftime("%Y%m%d")
-                    base = f"chromabot_{date_only}"
-                if seq:
-                    filename = f"{base}_{seq}.xlsx"
-                else:
-                    filename = f"{base}.xlsx"
+                filename = f"{base}_{seq_str}.xlsx" if seq_str else f"{base}.xlsx"
             
             if not filename.endswith('.xlsx'):
                 filename += '.xlsx'
@@ -642,11 +682,10 @@ class ChromabotExporter:
             filepath = self.excel_path / filename
             
             with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-                
                 rows_complete = []
                 for reading in session_data.all_readings:
                     rows_complete.append({
-                        'codigo_pina': session_data.sample_id,
+                        'codigo_pina': session_data.sample_id,  # Ahora usa el sample_id actualizado
                         'variedad': session_data.pineapple_type,
                         'var_codigo': session_data.pineapple_code,
                         'estado_madurez': session_data.maturity_state,
